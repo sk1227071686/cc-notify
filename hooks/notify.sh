@@ -112,37 +112,42 @@ except:
 
 PROJECT=$(basename "$CWD" 2>/dev/null || echo "unknown")
 
-# --- Build notification content ---
+# --- Build notification content (markdown + emoji) ---
 case "$EVENT_TYPE" in
   Stop)
+    ICON="✅"
     TITLE="Task Done"
     REASON="${MESSAGE:-Task completed successfully}"
     ;;
   Notification)
     case "$NOTIFICATION_TYPE" in
       permission_prompt)
+        ICON="🔔"
         TITLE="Needs Permission"
         REASON="${MESSAGE:-Waiting for permission to proceed}"
         ;;
       idle_prompt)
+        ICON="⏸️"
         TITLE="Idle"
         REASON="${MESSAGE:-Waiting for user input}"
         ;;
       *)
+        ICON="ℹ️"
         TITLE="Notification"
         REASON="${MESSAGE:-$NOTIFICATION_TYPE}"
         ;;
     esac
     ;;
   *)
+    ICON="ℹ️"
     TITLE="Event"
     REASON="${MESSAGE:-$EVENT_TYPE}"
     ;;
 esac
 
-FULL_BODY="[Claude Code] ${TITLE}
-Project: ${PROJECT}
-Reason: ${REASON}"
+FULL_BODY="**${ICON} Claude Code — ${TITLE}**
+📁 \`${PROJECT}\`
+📝 ${REASON}"
 
 # --- Load config and send ---
 if ! load_config; then
@@ -176,9 +181,9 @@ import json, subprocess, sys
 
 payload = {
     'touser': sys.argv[1],
-    'msgtype': 'text',
+    'msgtype': 'markdown',
     'agentid': int(sys.argv[2]),
-    'text': {'content': sys.argv[3]}
+    'markdown': {'content': sys.argv[3]}
 }
 
 cmd = [
