@@ -22,12 +22,33 @@ echo ""
 # --- Check existing config ---
 if [ -f "$CONFIG_PATH" ]; then
   echo "Existing config found at $CONFIG_PATH"
-  read -r -p "Reconfigure? [y/N] " answer </dev/tty
-  if [[ ! "$answer" =~ ^[Yy]$ ]]; then
-    echo "Setup cancelled."
-    exit 0
+
+  # Validate existing config before offering options
+  if python3 "$SCRIPT_DIR/validate_config.py" >/dev/null 2>&1; then
+    echo "Existing config is valid."
+    read -r -p "Reconfigure? [y/N] " answer </dev/tty
+    if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+      echo "Setup cancelled. Existing config kept."
+      exit 0
+    fi
+    # Backup before reconfiguring
+    BACKUP="${CONFIG_PATH}.bak.$(date +%Y%m%d%H%M%S)"
+    cp "$CONFIG_PATH" "$BACKUP"
+    echo "Old config backed up to: $BACKUP"
+    echo ""
+  else
+    echo "Existing config is invalid or corrupted."
+    read -r -p "Overwrite with new config? [y/N] " answer </dev/tty
+    if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+      echo "Setup cancelled."
+      exit 0
+    fi
+    # Backup even when overwriting invalid config
+    BACKUP="${CONFIG_PATH}.bak.$(date +%Y%m%d%H%M%S)"
+    cp "$CONFIG_PATH" "$BACKUP"
+    echo "Old config backed up to: $BACKUP"
+    echo ""
   fi
-  echo ""
 fi
 
 # --- Helper: prompt with validation ---
