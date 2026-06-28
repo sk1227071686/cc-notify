@@ -14,7 +14,6 @@
       },
       "homepage": "https://github.com/sk1227071686/cc-notify",
       "repository": "https://github.com/sk1227071686/cc-notify",
-      "hooks": "./hooks/hooks.json",
       "skills": [
         "./skills/cc-notify"
       ]

@@ -15,6 +15,5 @@
     "hooks",
     "enterprise-wechat",
     "dm"
-  ],
-  "hooks": "./hooks/hooks.json"
+  ]
 }
