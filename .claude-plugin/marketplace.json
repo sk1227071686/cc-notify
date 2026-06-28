@@ -1,0 +1,23 @@
+{
+  "name": "sk1227071686",
+  "owner": {
+    "name": "shikang"
+  },
+  "plugins": [
+    {
+      "name": "cc-notify",
+      "source": "./",
+      "description": "WeCom (Enterprise WeChat) DM notifications for Claude Code CLI. Sends a WeCom direct message when CC tasks complete, need permission, or go idle.",
+      "version": "1.0.0",
+      "author": {
+        "name": "shikang"
+      },
+      "homepage": "https://github.com/sk1227071686/cc-notify",
+      "repository": "https://github.com/sk1227071686/cc-notify",
+      "hooks": "./hooks/hooks.json",
+      "skills": [
+        "./skills/cc-notify"
+      ]
+    }
+  ]
+}
