@@ -1,20 +1,49 @@
 # CC Notify
 
-Desktop popup notifications for Claude Code CLI on remote Linux hosts accessed via SSH with X11 forwarding.
+WeCom (Enterprise WeChat) DM notifications for Claude Code CLI on remote Linux hosts.
 
 ## Problem
 
-When running Claude Code on a remote Linux host via SSH, you can't see when it finishes a task or needs permission — especially when you're focused on other windows.
+When running Claude Code on a remote Linux host, you can't see when it finishes a task or needs permission — especially when you're away from your desk.
 
 ## Solution
 
-A Claude Code hook that triggers X11 popup windows (via `xmessage`) on your local desktop whenever CC events fire:
+A Claude Code hook that sends WeCom direct messages to your phone/desktop whenever CC events fire:
 
-| Event | Trigger | Popup |
+| Event | Trigger | Notification |
 |---|---|---|
-| `Stop` | Task completes | "CC Task Done" |
-| `permission_prompt` | Needs authorization | "CC Needs Permission" |
-| `idle_prompt` | Waiting for input | "CC Idle" |
+| `Stop` | Task completes | `[Claude Code] Task Done` |
+| `permission_prompt` | Needs authorization | `[Claude Code] Needs Permission` |
+| `idle_prompt` | Waiting for input | `[Claude Code] Idle` |
+
+Each message includes the project name and the reason for the notification.
+
+## Architecture
+
+```
+Claude Code hook
+    |
+    v
+notify.sh (reads ~/.claude/cc-notify/config.json)
+    |
+    v
+HTTPS proxy (your public server with static IP)
+    |
+    v
+WeCom API (qyapi.weixin.qq.com)
+    |
+    v
+WeCom DM on your phone
+```
+
+A public server with a static IP is required because WeCom API requires a trusted IP, and your remote host may have a dynamic IP. The public server runs an Nginx HTTPS reverse proxy that forwards requests to the WeCom API.
+
+## Prerequisites
+
+- WeCom (Enterprise WeChat) admin access
+- A public server with a static IP (e.g., cloud VPS)
+- Nginx with SSL certificate on the public server
+- The target user must exist in your WeCom contacts
 
 ## Install as a skill
 
@@ -22,34 +51,121 @@ A Claude Code hook that triggers X11 popup windows (via `xmessage`) on your loca
 npx skills add sk1227071686/cc-notify
 ```
 
+After installation, run the setup wizard to configure your credentials:
+
+```bash
+bash ~/.skills/cc-notify/scripts/setup.sh
+```
+
 ## Manual install
 
 ```bash
 git clone https://github.com/sk1227071686/cc-notify.git
 cd cc-notify
-cp -r skills/cc-notify ~/.skills/
+```
+
+Copy the hook script:
+
+```bash
 mkdir -p ~/.claude/hooks
 cp skills/cc-notify/scripts/notify.sh ~/.claude/hooks/notify.sh
 chmod +x ~/.claude/hooks/notify.sh
-sudo apt-get install -y x11-utils
 ```
+
+Run the setup wizard:
+
+```bash
+bash skills/cc-notify/scripts/setup.sh
+```
+
+The wizard will collect all required credentials and test the notification chain.
 
 Then add to `~/.claude/settings.json`:
 
 ```json
 {
   "hooks": {
-    "Stop": [{ "matcher": "", "hooks": [{ "type": "command", "command": "~/.claude/hooks/notify.sh" }] }],
-    "Notification": [{ "matcher": "permission_prompt|idle_prompt", "hooks": [{ "type": "command", "command": "~/.claude/hooks/notify.sh" }] }]
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "~/.claude/hooks/notify.sh" }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt|idle_prompt",
+        "hooks": [
+          { "type": "command", "command": "~/.claude/hooks/notify.sh" }
+        ]
+      }
+    ]
   }
 }
 ```
 
-## Prerequisites
+## Configuration file
 
-- SSH with X11 forwarding: `ssh -Y user@host`
-- X11 server on local machine (MobaXterm, XQuartz, Xsrv, etc.)
-- Tested with MobaXterm on Windows
+The setup wizard creates `~/.claude/cc-notify/config.json`:
+
+```json
+{
+  "corpid": "wwxxxxxxxxxxxxxxxx",
+  "corpsecret": "your-app-secret",
+  "agentid": "1000002",
+  "proxy_url": "https://your-proxy-server.com:8443",
+  "userid": "ZhangSan"
+}
+```
+
+Validate it anytime:
+
+```bash
+python3 <SKILL_DIR>/scripts/validate_config.py
+```
+
+## Proxy server setup
+
+See the SKILL.md for detailed proxy server setup instructions (Nginx + Python callback server).
+
+Quick summary:
+1. Install Nginx on your public server with SSL
+2. Configure Nginx to proxy `/` → `qyapi.weixin.qq.com` and `/callback/` → local Python server
+3. Set up the Python callback server (handles WeCom URL validation)
+4. Add your public server IP to WeCom admin as trusted IP
+5. Configure the callback URL in WeCom admin
+
+## Notification format
+
+```
+[Claude Code] Task Done
+Project: my-project
+Reason: Task completed successfully
+```
+
+```
+[Claude Code] Needs Permission
+Project: my-project
+Reason: Claude needs permission to run: rm -rf /tmp/build
+```
+
+```
+[Claude Code] Idle
+Project: my-project
+Reason: Waiting for user input
+```
+
+## Troubleshooting
+
+| Problem | Cause | Fix |
+|---|---|---|
+| No notification at all | Config file missing | Run `bash setup.sh` |
+| "Failed to get access token" | corpid/secret wrong or proxy unreachable | Check credentials and proxy URL |
+| "not allow to access from your ip" | IP not in trusted IP list | Add your public server IP to WeCom trusted IP |
+| "openapi callback URL request failed" | Callback server unreachable | Check Nginx + Python callback server |
+| Test message succeeds but events don't notify | Hook not configured | Check `~/.claude/settings.json` hooks section |
+| Message not delivered | User not in app visible range | Add user to app's visible range in WeCom admin |
 
 ## License
 
