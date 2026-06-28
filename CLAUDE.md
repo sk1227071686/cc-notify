@@ -12,49 +12,65 @@ CC Notify is a Claude Code hook (skill) that sends WeCom (Enterprise WeChat) dir
 cc-notify/
   CLAUDE.md                          # This file - dev instructions
   README.md                          # User-facing documentation
-  docs/
-    design.md                        # Design & implementation document
-    deployment-guide.md              # Beginner deployment guide (Chinese)
-    technical-decisions.md           # Technical decision records
-    retrospective.md                 # Retrospective & lessons learned
+  .claude/
+    settings.json                    # Project-level hooks (commit to git for team sharing)
+  .claude-plugin/
+    plugin.json                      # Plugin manifest (for /plugin install)
+  hooks/
+    hooks.json                       # Plugin hooks config (auto-loaded on install)
+    notify.sh                        # Hook script with auto-detection
+  scripts/
+    setup.sh                         # Interactive setup wizard with status detection
+    validate_config.py               # Config validation helper
   skills/
     cc-notify/
-      SKILL.md                       # Skill definition + setup guide + usage
-      scripts/
-        notify.sh                    # Hook script - reads config, sends WeCom DM
-        setup.sh                     # Interactive setup wizard
-        validate_config.py           # Config validation helper
+      SKILL.md                       # Skill definition + setup guide
+  docs/
+    design.md                        # Design & implementation document
+    deployment-guide.md              # Beginner deployment guide
+    technical-decisions.md           # Technical decision records
+    retrospective.md                 # Retrospective & lessons learned
 ```
+
+## Installation methods
+
+| Method | Best for | Hook auto-registration? |
+|--------|----------|------------------------|
+| Plugin (`/plugin install`) | Individual users | Yes — hooks.json auto-loads |
+| Project-level `.claude/settings.json` | Teams | Yes — commit to git |
+| Global `~/.claude/settings.json` | Personal all-projects | Manual setup required |
 
 ## Core architecture
 
 ### Hook script (`notify.sh`)
 
-1. Reads JSON from stdin (Claude Code hook standard input)
-2. Parses `hook_event_name`, `notification_type`, `message`, `cwd` fields
-3. Builds a notification message based on event type:
+1. **Auto-detect**: Checks config exists, validates format, tests proxy reachability
+2. Reads JSON from stdin (Claude Code hook standard input)
+3. Parses `hook_event_name`, `notification_type`, `message`, `cwd` fields
+4. Builds a notification message based on event type:
    - `Stop` → "[Claude Code] Task Done"
    - `Notification` + `permission_prompt` → "[Claude Code] Needs Permission"
    - `Notification` + `idle_prompt` → "[Claude Code] Idle"
-4. Reads config from `~/.claude/cc-notify/config.json`
-5. Gets access token via the proxy server
-6. Sends WeCom DM via backgrounded curl (non-blocking)
-7. Outputs `{}` (required by CC hooks)
+5. Reads config from `~/.claude/cc-notify/config.json`
+6. Gets access token via the proxy server
+7. Sends WeCom DM via backgrounded curl (non-blocking)
+8. Outputs `{}` (required by CC hooks)
 
 ### Setup wizard (`setup.sh`)
 
-Interactive bash script that guides the user through:
-1. Collecting corpid, corpsecret, agentid, proxy_url, userid
-2. Writing `~/.claude/cc-notify/config.json`
-3. Testing the full notification chain
-4. Displaying hook configuration instructions
+Interactive bash script with auto-detection:
+1. Detects existing deployment status (NOT_DEPLOYED / INVALID_CONFIG / PROXY_UNREACHABLE / DEPLOYED)
+2. Guides user accordingly (full setup / fix config / skip)
+3. Collects and validates all 5 fields
+4. Writes config atomically with backup of existing
+5. Tests the full notification chain
 
 ### Config validation (`validate_config.py`)
 
 Python3 script that validates `~/.claude/cc-notify/config.json`:
 - All 5 required fields present
 - `proxy_url` starts with `https://`
-- `agent_id` is numeric
+- `agentid` is numeric
 - Exits 0 = valid, exit 1 = invalid
 
 ## Configuration

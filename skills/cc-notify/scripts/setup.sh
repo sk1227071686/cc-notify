@@ -19,37 +19,89 @@ echo "  CC Notify - WeCom DM Setup Wizard"
 echo "========================================="
 echo ""
 
-# --- Check existing config ---
-if [ -f "$CONFIG_PATH" ]; then
-  echo "Existing config found at $CONFIG_PATH"
+# --- Auto-detect existing deployment status ---
+detect_deployment() {
+  # Step 1: Check config file exists
+  if [ ! -f "$CONFIG_PATH" ]; then
+    echo "NOT_DEPLOYED"
+    return
+  fi
 
-  # Validate existing config before offering options
-  if python3 "$SCRIPT_DIR/validate_config.py" >/dev/null 2>&1; then
-    echo "Existing config is valid."
-    read -r -p "Reconfigure? [y/N] " answer </dev/tty
-    if [[ ! "$answer" =~ ^[Yy]$ ]]; then
-      echo "Setup cancelled. Existing config kept."
-      exit 0
-    fi
-    # Backup before reconfiguring
-    BACKUP="${CONFIG_PATH}.bak.$(date +%Y%m%d%H%M%S)"
-    cp "$CONFIG_PATH" "$BACKUP"
-    echo "Old config backed up to: $BACKUP"
-    echo ""
-  else
+  # Step 2: Validate config format
+  if ! python3 "$SCRIPT_DIR/validate_config.py" >/dev/null 2>&1; then
+    echo "INVALID_CONFIG"
+    return
+  fi
+
+  # Step 3: Test proxy reachability
+  local proxy_url
+  proxy_url=$(python3 -c "
+import json, sys
+with open(sys.argv[1]) as f:
+    print(json.load(f).get('proxy_url', ''))
+" "$CONFIG_PATH" 2>/dev/null)
+
+  if [ -z "$proxy_url" ]; then
+    echo "INVALID_CONFIG"
+    return
+  fi
+
+  local token_resp
+  token_resp=$(curl -sk --connect-timeout 5 "${proxy_url}/cgi-bin/gettoken?corpid=$(python3 -c "import json;print(json.load(open(sys.argv[1]))['corpid'])" "$CONFIG_PATH")&corpsecret=$(python3 -c "import json;print(json.load(open(sys.argv[1]))['corpsecret'])" "$CONFIG_PATH")" 2>/dev/null || echo "{}")
+
+  local access_token
+  access_token=$(echo "$token_resp" | python3 -c "import sys,json;print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null || echo "")
+
+  if [ -z "$access_token" ]; then
+    echo "PROXY_UNREACHABLE"
+    return
+  fi
+
+  echo "DEPLOYED"
+}
+
+# --- Run auto-detect ---
+echo ""
+echo "Detecting existing deployment status..."
+STATUS=$(detect_deployment)
+
+case "$STATUS" in
+  NOT_DEPLOYED)
+    echo "No existing deployment found. Starting fresh setup..."
+    ;;
+  INVALID_CONFIG)
     echo "Existing config is invalid or corrupted."
-    read -r -p "Overwrite with new config? [y/N] " answer </dev/tty
+    read -r -p "Reconfigure? [y/N] " answer </dev/tty
     if [[ ! "$answer" =~ ^[Yy]$ ]]; then
       echo "Setup cancelled."
       exit 0
     fi
-    # Backup even when overwriting invalid config
-    BACKUP="${CONFIG_PATH}.bak.$(date +%Y%m%d%H%M%S)"
-    cp "$CONFIG_PATH" "$BACKUP"
-    echo "Old config backed up to: $BACKUP"
+    ;;
+  PROXY_UNREACHABLE)
+    echo "Config exists but proxy is unreachable."
+    echo "Check your proxy server or enter new values."
+    read -r -p "Reconfigure proxy settings? [y/N] " answer </dev/tty
+    if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+      echo "Setup cancelled. Existing config kept."
+      exit 0
+    fi
+    ;;
+  DEPLOYED)
+    echo "Existing deployment detected and working!"
     echo ""
-  fi
-fi
+    echo "Config: $CONFIG_PATH"
+    echo "Proxy: $(python3 -c "import json;print(json.load(open(sys.argv[1]))['proxy_url'])" "$CONFIG_PATH")"
+    echo "User: $(python3 -c "import json;print(json.load(open(sys.argv[1]))['userid'])" "$CONFIG_PATH")"
+    echo ""
+    read -r -p "Reconfigure anyway? [y/N] " answer </dev/tty
+    if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+      echo "Setup cancelled. Existing deployment kept."
+      exit 0
+    fi
+    ;;
+esac
+
+echo ""
 
 # --- Helper: prompt with validation ---
 prompt_required() {

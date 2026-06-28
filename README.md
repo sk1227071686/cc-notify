@@ -45,7 +45,25 @@ A public server with a static IP is required because WeCom API requires a truste
 - Nginx with SSL certificate on the public server
 - The target user must exist in your WeCom contacts
 
-## Install as a skill
+## Install as a plugin (recommended)
+
+```bash
+# Add the marketplace source
+/plugin marketplace add sk1227071686/cc-notify
+
+# Install the plugin
+/plugin install cc-notify@cc-notify
+```
+
+The plugin automatically registers Stop/Notification hooks — no manual settings.json editing needed.
+
+After installation, run the setup wizard:
+
+```bash
+bash ~/.claude/plugins/skills/cc-notify/scripts/setup.sh
+```
+
+## Install as a skill (legacy)
 
 ```bash
 npx skills add sk1227071686/cc-notify
@@ -56,6 +74,8 @@ After installation, run the setup wizard to configure your credentials:
 ```bash
 bash ~/.skills/cc-notify/scripts/setup.sh
 ```
+
+> **Important:** Installing the skill does **not** enable automatic notifications. You must also configure the Claude Code hook to route `Stop` and `Notification` events to `notify.sh`. See the "Hook configuration" section below — without it, no notifications will be sent when events fire.
 
 ## Manual install
 
@@ -80,7 +100,7 @@ bash skills/cc-notify/scripts/setup.sh
 
 The wizard will collect all required credentials and test the notification chain.
 
-Then add to `~/.claude/settings.json`:
+Then add to `~/.claude/settings.json` (or use the plugin's built-in hooks):
 
 ```json
 {
@@ -104,6 +124,8 @@ Then add to `~/.claude/settings.json`:
   }
 }
 ```
+
+> **This step is required.** Without the hook configuration above, Claude Code will not call `notify.sh` when events fire, and no WeCom messages will be sent. The skill installation only places the script on disk — the hook must be explicitly registered in `settings.json`.
 
 ## Configuration file
 

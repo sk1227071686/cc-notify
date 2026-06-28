@@ -19,28 +19,58 @@ When CC runs on a remote Linux host, you can't see it finish or ask for permissi
 2. The script calls the WeCom API via a public server HTTPS proxy
 3. A WeCom DM arrives on your phone with the event details
 
-## First-time setup
+## Installation
 
-Check if the skill is already configured:
+### Method 1: Plugin (recommended for individual users)
 
 ```bash
-test -f ~/.claude/cc-notify/config.json && echo "CONFIGURED" || echo "NEEDS_SETUP"
+# Add the marketplace source (this project's GitHub repo)
+/plugin marketplace add sk1227071686/cc-notify
+
+# Install the plugin
+/plugin install cc-notify@cc-notify
 ```
 
-If `NEEDS_SETUP`, run the setup wizard:
+The plugin automatically registers Stop/Notification hooks — no manual `settings.json` editing needed.
+
+After installation, run the setup wizard:
 
 ```bash
 bash <SKILL_DIR>/scripts/setup.sh
 ```
 
-The wizard will guide you through:
+### Method 2: Project-level hooks (recommended for teams)
 
-1. **Getting corpid** — from WeCom Admin Panel > Settings > Corporate Info
-2. **Getting corpsecret + agentid** — by creating a self-built app in Admin Panel > Application Management
-3. **Setting up a proxy server** — Nginx HTTPS reverse proxy on a public server (see below)
-4. **Configuring WeCom admin** — callback URL + trusted IP
-5. **Getting target user's userid** — from Admin Panel > Contacts
-6. **Testing** — sends a test message to verify the full chain
+If you work on a team, commit the hooks to your project repo:
+
+1. Copy the project's `.claude/settings.json` to your project root
+2. Copy `hooks/notify.sh` to `.claude/hooks/notify.sh` (or install globally)
+3. Commit these files to git
+
+Anyone who clones the project gets hooks automatically.
+
+### Method 3: Global hooks (personal use across all projects)
+
+Copy `notify.sh` to `~/.claude/hooks/notify.sh` and add the hook config to `~/.claude/settings.json`.
+
+## First-time setup
+
+The setup wizard auto-detects your current deployment status:
+
+```bash
+bash <SKILL_DIR>/scripts/setup.sh
+```
+
+It will tell you if:
+- ✅ Already deployed and working — no action needed
+- ❌ Config missing — guides you through full setup
+- ⚠️ Config exists but proxy unreachable — offers to reconfigure
+
+You can also check manually:
+
+```bash
+test -f ~/.claude/cc-notify/config.json && echo "CONFIGURED" || echo "NEEDS_SETUP"
+```
 
 ## Manual setup
 
@@ -64,7 +94,15 @@ python3 <SKILL_DIR>/scripts/validate_config.py
 
 ## Hook configuration
 
-Add to `~/.claude/settings.json` (merge with existing config):
+> **This step is required for automatic notifications.** Installing the skill only places `notify.sh` on disk. Claude Code will not call it on `Stop`/`Notification` events unless you register the hook. Without this configuration, no WeCom messages will be sent when events fire.
+
+### For Plugin installation (Method 1)
+
+Hooks are automatically registered. No manual configuration needed.
+
+### For Project-level installation (Method 2)
+
+Add to your project's `.claude/settings.json` (merge with existing config):
 
 ```json
 {
@@ -75,7 +113,9 @@ Add to `~/.claude/settings.json` (merge with existing config):
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/notify.sh"
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/notify.sh\"",
+            "timeout": 30,
+            "async": true
           }
         ]
       }
@@ -86,7 +126,9 @@ Add to `~/.claude/settings.json` (merge with existing config):
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/notify.sh"
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/notify.sh\"",
+            "timeout": 30,
+            "async": true
           }
         ]
       }
@@ -95,13 +137,9 @@ Add to `~/.claude/settings.json` (merge with existing config):
 }
 ```
 
-Copy the hook script:
+### For Global installation (Method 3)
 
-```bash
-mkdir -p ~/.claude/hooks
-cp <SKILL_DIR>/scripts/notify.sh ~/.claude/hooks/notify.sh
-chmod +x ~/.claude/hooks/notify.sh
-```
+Copy `notify.sh` to `~/.claude/hooks/notify.sh` and add the same hook config to `~/.claude/settings.json`.
 
 ## Notification format
 
