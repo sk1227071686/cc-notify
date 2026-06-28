@@ -2,7 +2,7 @@
   "name": "cc-notify",
   "displayName": "CC Notify",
   "description": "WeCom (Enterprise WeChat) DM notifications for Claude Code CLI. Sends a WeCom direct message when CC tasks complete, need permission, or go idle.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "shikang"
   },
