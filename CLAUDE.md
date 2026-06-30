@@ -14,17 +14,19 @@ cc-notify/
   README.md                          # User-facing documentation
   .claude/
     settings.json                    # Project-level hooks (commit to git for team sharing)
+    settings.local.json              # Local project settings (not committed)
   .claude-plugin/
     plugin.json                      # Plugin manifest (for /plugin install)
+    marketplace.json                 # Marketplace listing (for /plugin marketplace add)
   hooks/
     hooks.json                       # Plugin hooks config (auto-loaded on install)
-    notify.sh                        # Hook script with auto-detection
-  scripts/
-    setup.sh                         # Interactive setup wizard with status detection
-    validate_config.py               # Config validation helper
+    notify.sh                        # Hook script with auto-detection (canonical)
   skills/
     cc-notify/
       SKILL.md                       # Skill definition + setup guide
+      scripts/
+        setup.sh                     # Interactive setup wizard with status detection
+        validate_config.py           # Config validation helper
   docs/
     design.md                        # Design & implementation document
     deployment-guide.md              # Beginner deployment guide
@@ -48,9 +50,9 @@ cc-notify/
 2. Reads JSON from stdin (Claude Code hook standard input)
 3. Parses `hook_event_name`, `notification_type`, `message`, `cwd` fields
 4. Builds a notification message based on event type:
-   - `Stop` → "[Claude Code] Task Done"
-   - `Notification` + `permission_prompt` → "[Claude Code] Needs Permission"
-   - `Notification` + `idle_prompt` → "[Claude Code] Idle"
+   - `Stop` → "**✅ Claude Code — Task Done**"
+   - `Notification` + `permission_prompt` → "**🔔 Claude Code — Needs Permission**"
+   - `Notification` + `idle_prompt` → "**⏸️ Claude Code — Idle**"
 5. Reads config from `~/.claude/cc-notify/config.json`
 6. Gets access token via the proxy server
 7. Sends WeCom DM via backgrounded curl (non-blocking)

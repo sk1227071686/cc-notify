@@ -29,15 +29,17 @@ Reason: Task completed successfully
 
 ---
 
-## 第一步：安装技能
+## 第一步：安装
 
-在 Claude Code 中运行：
+**推荐方式：通过 marketplace 安装**（自动注册 hook，无需手动配置）：
 
 ```bash
-npx skills add sk1227071686/cc-notify
+# 在 Claude Code 中
+/plugin marketplace add https://github.com/sk1227071686/cc-notify
+/plugin install cc-notify@cc-notify
 ```
 
-或者手动安装：
+**手动安装**：
 
 ```bash
 git clone https://github.com/sk1227071686/cc-notify.git
@@ -253,6 +255,10 @@ curl -sk https://your-domain.com:8443/cgi-bin/gettoken?corpid=你的corpid&corps
 回到你的**本机**（运行 Claude Code 的那台机器）：
 
 ```bash
+# 如果通过 marketplace 安装：
+bash ~/.claude/plugins/cc-notify/skills/cc-notify/scripts/setup.sh
+
+# 如果手动安装：
 bash skills/cc-notify/scripts/setup.sh
 ```
 
@@ -270,11 +276,15 @@ bash skills/cc-notify/scripts/setup.sh
 
 ## 第六步：配置 Claude Code 钩子
 
+> **marketplace 用户可跳过此步。** 通过插件安装时，hook 已自动注册，无需手动配置。
+
+仅在你**手动安装**（git clone）时才需要以下步骤：
+
 ### 6.1 复制钩子脚本
 
 ```bash
 mkdir -p ~/.claude/hooks
-cp skills/cc-notify/scripts/notify.sh ~/.claude/hooks/notify.sh
+cp hooks/notify.sh ~/.claude/hooks/notify.sh
 chmod +x ~/.claude/hooks/notify.sh
 ```
 
@@ -352,4 +362,10 @@ A: 需要重新启动回调服务和 Nginx。建议设置 systemd 服务或 cron
 A: 重新申请证书，替换 Nginx 配置中的证书路径，然后 `sudo nginx -s reload`。
 
 ### Q: 以后想改配置怎么办？
-A: 重新运行 `bash skills/cc-notify/scripts/setup.sh`，或直接编辑 `~/.claude/cc-notify/config.json`。
+A: 重新运行 setup 向导，或直接编辑 `~/.claude/cc-notify/config.json`：
+```bash
+# marketplace 安装：
+bash ~/.claude/plugins/cc-notify/skills/cc-notify/scripts/setup.sh
+# 手动安装：
+bash skills/cc-notify/scripts/setup.sh
+```

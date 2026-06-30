@@ -45,62 +45,39 @@ A public server with a static IP is required because WeCom API requires a truste
 - Nginx with SSL certificate on the public server
 - The target user must exist in your WeCom contacts
 
-## Install as a plugin (recommended)
+## Install via marketplace (recommended)
+
+Install directly from the GitHub repository — no manual cloning needed:
 
 ```bash
-# Add the marketplace source
-/plugin marketplace add sk1227071686/cc-notify
+# In Claude Code, add the marketplace source
+/plugin marketplace add https://github.com/sk1227071686/cc-notify
 
 # Install the plugin
 /plugin install cc-notify@cc-notify
 ```
 
-The plugin automatically registers Stop/Notification hooks — no manual settings.json editing needed.
-
-After installation, run the setup wizard:
-
-```bash
-bash ~/.claude/plugins/skills/cc-notify/scripts/setup.sh
-```
-
-## Install as a skill (legacy)
-
-```bash
-npx skills add sk1227071686/cc-notify
-```
+The plugin automatically registers `Stop` and `Notification` hooks — no `settings.json` editing needed.
 
 After installation, run the setup wizard to configure your credentials:
 
 ```bash
-bash ~/.skills/cc-notify/scripts/setup.sh
+bash ~/.claude/plugins/cc-notify/skills/cc-notify/scripts/setup.sh
 ```
 
-> **Important:** Installing the skill does **not** enable automatic notifications. You must also configure the Claude Code hook to route `Stop` and `Notification` events to `notify.sh`. See the "Hook configuration" section below — without it, no notifications will be sent when events fire.
+The wizard will collect all required credentials and test the notification chain. Once configured, WeCom notifications will fire automatically when Claude Code events occur.
 
 ## Manual install
+
+Clone the repository and run setup:
 
 ```bash
 git clone https://github.com/sk1227071686/cc-notify.git
 cd cc-notify
-```
-
-Copy the hook script:
-
-```bash
-mkdir -p ~/.claude/hooks
-cp skills/cc-notify/scripts/notify.sh ~/.claude/hooks/notify.sh
-chmod +x ~/.claude/hooks/notify.sh
-```
-
-Run the setup wizard:
-
-```bash
 bash skills/cc-notify/scripts/setup.sh
 ```
 
-The wizard will collect all required credentials and test the notification chain.
-
-Then add to `~/.claude/settings.json` (or use the plugin's built-in hooks):
+Then add to `~/.claude/settings.json` to register the hooks:
 
 ```json
 {
@@ -109,7 +86,7 @@ Then add to `~/.claude/settings.json` (or use the plugin's built-in hooks):
       {
         "matcher": "",
         "hooks": [
-          { "type": "command", "command": "~/.claude/hooks/notify.sh" }
+          { "type": "command", "command": "bash \"/path/to/cc-notify/hooks/notify.sh\"" }
         ]
       }
     ],
@@ -117,7 +94,7 @@ Then add to `~/.claude/settings.json` (or use the plugin's built-in hooks):
       {
         "matcher": "permission_prompt|idle_prompt",
         "hooks": [
-          { "type": "command", "command": "~/.claude/hooks/notify.sh" }
+          { "type": "command", "command": "bash \"/path/to/cc-notify/hooks/notify.sh\"" }
         ]
       }
     ]
@@ -125,7 +102,7 @@ Then add to `~/.claude/settings.json` (or use the plugin's built-in hooks):
 }
 ```
 
-> **This step is required.** Without the hook configuration above, Claude Code will not call `notify.sh` when events fire, and no WeCom messages will be sent. The skill installation only places the script on disk — the hook must be explicitly registered in `settings.json`.
+> **This step is required.** Without the hook configuration above, Claude Code will not call `notify.sh` when events fire. Replace `/path/to/cc-notify` with the actual clone path.
 
 ## Configuration file
 
@@ -144,7 +121,11 @@ The setup wizard creates `~/.claude/cc-notify/config.json`:
 Validate it anytime:
 
 ```bash
-python3 <SKILL_DIR>/scripts/validate_config.py
+# If installed via marketplace:
+python3 ~/.claude/plugins/cc-notify/skills/cc-notify/scripts/validate_config.py
+
+# If installed manually:
+python3 /path/to/cc-notify/skills/cc-notify/scripts/validate_config.py
 ```
 
 ## Proxy server setup
@@ -160,29 +141,31 @@ Quick summary:
 
 ## Notification format
 
+Messages are sent as Enterprise WeChat **markdown** with emoji:
+
 ```
-[Claude Code] Task Done
-Project: my-project
-Reason: Task completed successfully
+**✅ Claude Code — Task Done**
+📁 `my-project`
+📝 Task completed successfully
 ```
 
 ```
-[Claude Code] Needs Permission
-Project: my-project
-Reason: Claude needs permission to run: rm -rf /tmp/build
+**🔔 Claude Code — Needs Permission**
+📁 `my-project`
+📝 Waiting for permission to proceed
 ```
 
 ```
-[Claude Code] Idle
-Project: my-project
-Reason: Waiting for user input
+**⏸️ Claude Code — Idle**
+📁 `my-project`
+📝 Waiting for user input
 ```
 
 ## Troubleshooting
 
 | Problem | Cause | Fix |
 |---|---|---|
-| No notification at all | Config file missing | Run `bash setup.sh` |
+| No notification at all | Config file missing | Run `bash ~/.claude/plugins/cc-notify/skills/cc-notify/scripts/setup.sh` |
 | "Failed to get access token" | corpid/secret wrong or proxy unreachable | Check credentials and proxy URL |
 | "not allow to access from your ip" | IP not in trusted IP list | Add your public server IP to WeCom trusted IP |
 | "openapi callback URL request failed" | Callback server unreachable | Check Nginx + Python callback server |

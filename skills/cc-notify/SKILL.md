@@ -25,7 +25,7 @@ When CC runs on a remote Linux host, you can't see it finish or ask for permissi
 
 ```bash
 # Add the marketplace source (this project's GitHub repo)
-/plugin marketplace add sk1227071686/cc-notify
+/plugin marketplace add https://github.com/sk1227071686/cc-notify
 
 # Install the plugin
 /plugin install cc-notify@cc-notify
@@ -36,7 +36,7 @@ The plugin automatically registers Stop/Notification hooks — no manual `settin
 After installation, run the setup wizard:
 
 ```bash
-bash <SKILL_DIR>/scripts/setup.sh
+bash ~/.claude/plugins/cc-notify/skills/cc-notify/scripts/setup.sh
 ```
 
 ### Method 2: Project-level hooks (recommended for teams)
@@ -58,7 +58,7 @@ Copy `notify.sh` to `~/.claude/hooks/notify.sh` and add the hook config to `~/.c
 The setup wizard auto-detects your current deployment status:
 
 ```bash
-bash <SKILL_DIR>/scripts/setup.sh
+bash ~/.claude/plugins/cc-notify/skills/cc-notify/scripts/setup.sh
 ```
 
 It will tell you if:
@@ -89,12 +89,10 @@ If you prefer manual configuration, create `~/.claude/cc-notify/config.json`:
 Then validate it:
 
 ```bash
-python3 <SKILL_DIR>/scripts/validate_config.py
+python3 ~/.claude/plugins/cc-notify/skills/cc-notify/scripts/validate_config.py
 ```
 
 ## Hook configuration
-
-> **This step is required for automatic notifications.** Installing the skill only places `notify.sh` on disk. Claude Code will not call it on `Stop`/`Notification` events unless you register the hook. Without this configuration, no WeCom messages will be sent when events fire.
 
 ### For Plugin installation (Method 1)
 
@@ -113,7 +111,7 @@ Add to your project's `.claude/settings.json` (merge with existing config):
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/notify.sh\"",
+            "command": "bash \".claude/hooks/notify.sh\"",
             "timeout": 30,
             "async": true
           }
@@ -126,7 +124,7 @@ Add to your project's `.claude/settings.json` (merge with existing config):
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/notify.sh\"",
+            "command": "bash \".claude/hooks/notify.sh\"",
             "timeout": 30,
             "async": true
           }
@@ -143,24 +141,24 @@ Copy `notify.sh` to `~/.claude/hooks/notify.sh` and add the same hook config to 
 
 ## Notification format
 
-Messages sent to WeCom look like:
+Messages are sent as Enterprise WeChat **markdown** with emoji:
 
 ```
-[Claude Code] Task Done
-Project: my-project
-Reason: Task completed successfully
-```
-
-```
-[Claude Code] Needs Permission
-Project: my-project
-Reason: Waiting for permission to proceed
+**✅ Claude Code — Task Done**
+📁 `my-project`
+📝 Task completed successfully
 ```
 
 ```
-[Claude Code] Idle
-Project: my-project
-Reason: Waiting for user input
+**🔔 Claude Code — Needs Permission**
+📁 `my-project`
+📝 Waiting for permission to proceed
+```
+
+```
+**⏸️ Claude Code — Idle**
+📁 `my-project`
+📝 Waiting for user input
 ```
 
 ## Proxy server setup

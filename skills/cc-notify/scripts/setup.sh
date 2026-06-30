@@ -250,9 +250,14 @@ echo "========================================="
 echo "  Setup Complete!"
 echo "========================================="
 echo ""
-echo "Add the following hooks to your ~/.claude/settings.json:"
-echo ""
-cat <<'HOOKJSON'
+
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  echo "Plugin detected — hooks are already registered automatically."
+  echo "No manual hook configuration needed."
+else
+  echo "Add the following hooks to your ~/.claude/settings.json:"
+  echo ""
+  cat <<'HOOKJSON'
 {
   "hooks": {
     "Stop": [
@@ -280,11 +285,12 @@ cat <<'HOOKJSON'
   }
 }
 HOOKJSON
-echo ""
-echo "Then copy the hook script:"
-echo "  mkdir -p ~/.claude/hooks"
-echo "  cp $(dirname "$0")/notify.sh ~/.claude/hooks/notify.sh"
-echo "  chmod +x ~/.claude/hooks/notify.sh"
+  echo ""
+  echo "Then copy the hook script:"
+  echo "  mkdir -p ~/.claude/hooks"
+  echo "  cp $(dirname "$0")/notify.sh ~/.claude/hooks/notify.sh"
+  echo "  chmod +x ~/.claude/hooks/notify.sh"
+fi
 echo ""
 echo "Done! Your WeCom will notify you when Claude Code events fire."
 echo ""
